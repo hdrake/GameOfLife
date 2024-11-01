@@ -13,12 +13,19 @@ This code uses a few Python packages. To install them, first download and instal
 ```shell
 conda env create -f environment.yml
 ```
-or 
+or
+ 
 2. Create a new conda environment manually by running:
 ```shell
 conda create --name gameoflife python=3.12
 ```
-If creating the environment manually, install the packages needed to run ``play_game.py`` and ``draw_input_matplotlib.py`` by running
+
+Then, activate the environment with
+```shell
+conda activate gameoflife
+```
+
+and install the packages needed to run ``play_game.py`` and ``draw_input_matplotlib.py`` by running
 ```shell
 conda install -c conda-forge numpy scipy matplotlib
 ```
