@@ -2,8 +2,19 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os.path
 
+import sys
+ARGS = sys.argv[1:]
+
 N = 100
 M = 100
+
+if len(ARGS)==1:
+    N = int(ARGS[0])
+    M = N
+    dirpath = "examples/"
+else:
+    dirpath = "entries/"
+
 pname = None
 
 # Initial instructions
@@ -13,11 +24,11 @@ print("Click in grid boxes to place or remove cells" +
 fname = input("Enter a name for your input file: ")
 
 # Load file if it exists....
-if os.path.isfile(f"entries/{fname}"):
+if os.path.isfile(f"{dirpath}/{fname}"):
     print("File exists; loading for modification")
     cells = np.zeros((N*M,))
     ii = 0
-    with open(f"entries/{fname}", "r") as f:
+    with open(f"{dirpath}/{fname}", "r") as f:
         for line in f:
             for ch in line:
                 if ch == "0":
@@ -209,7 +220,7 @@ class PatternCanvas:
 
     # Close event handler: save input file
     def onclose(self, event):
-        with open(f"entries/{fname}", "w") as f:
+        with open(f"{dirpath}/{fname}", "w") as f:
             for j in range(N):
                 for i in range(M):
                     f.write("%d " % cells[j,i])

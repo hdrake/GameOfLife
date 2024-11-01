@@ -33,19 +33,15 @@ from scipy import signal
 import matplotlib.pyplot as plt
 import random
 
-class GameOfLife:
-
-    """
-    Initialize a game.
-
-    Inputs:
-        - red_name (string): name for the red team
-        - black_name (string): name for the black team
-        - M, N (integer): dimensions of the 2M*N grid
-        - T (integer: number of time steps
-    """
+class GameOfLifePvP:
     def __init__(self, M, N, T):
+        """
+        Initialize a player vs. player (PvP) game.
 
+        Inputs:
+            - M, N (integer): dimensions of the 2M*N grid
+            - T (integer: number of time steps
+        """
         self.red_name = ""
         self.black_name = ""
         self.red = np.zeros((N, 2*M), dtype = np.int8)
@@ -69,7 +65,7 @@ class GameOfLife:
                 "r-", alpha=0.75, label = self.red_name)
         self.black_history_plot, = axes[1].plot(
                 range(0, self.T+1), self.black_history,
-                "b-", alpha=0.75, label = self.red_name)
+                "b-", alpha=0.75, label = self.black_name)
         axes[1].set_xlim((0, T))
         axes[1].set_xlabel("Round")
         axes[1].set_ylabel("Cells")
@@ -253,3 +249,124 @@ class GameOfLife:
             iblack = random.randint(0, self.N-1)
         self.red[ired,jred] = 1
         self.black[iblack,jblack] = 1
+
+class GameOfLife:
+    def __init__(self, N):
+        """
+        Initialize a single-player game.
+
+        Inputs:
+            - N (integer): dimensions of the N*N grid
+        """
+        self.black_name = ""
+        self.black = np.zeros((N, N), dtype = np.int8)
+        self.T = 100
+        self.black_history = np.nan*np.zeros((self.T + 1,), dtype = int)
+        self.N = N
+        self.t = 0
+        fig, axes = plt.subplots(nrows = 2, ncols = 1,
+                figsize = (5, 8), dpi = 100)
+        self.fig = fig
+        self.axes = axes
+        self.image = axes[0].imshow(self.black, 
+                vmin = 0, vmax = 1.1, cmap = "Greys")
+        axes[0].yaxis.set_major_locator(plt.NullLocator())
+        axes[0].xaxis.set_major_locator(plt.NullLocator())
+        axes[0].set_xticks(np.arange(-0.5, N + 0.5 + 1, 1))
+        axes[0].set_xticklabels([""]*(N+2))
+        axes[0].set_yticks(np.arange(-0.5, N + 0.5 + 1, 1))
+        axes[0].set_yticklabels([""]*(N+2))
+        axes[0].grid()
+        self.black_history_plot, = axes[1].plot(
+                range(0, self.T+1), self.black_history,
+                "k-", alpha=0.75, label = self.black_name)
+        axes[1].set_xlim((0, self.T))
+        axes[1].set_xlabel("Round")
+        axes[1].set_ylabel("Cells")
+
+    """
+    Update the displayed board
+    """
+    def update_display(self):
+        self.axes[0].set_title(f"{self.black_name} at generation {self.t}")
+        self.image.set_data(self.black)
+        self.black_history_plot.set_data(
+                range(0, self.T+1), self.black_history)
+        yl = self.axes[1].get_ylim()
+        dmax = 1.1*self.black_history[self.t]
+        if yl[1] < dmax:
+            self.axes[1].set_ylim((0, dmax))
+        plt.pause(0.01)
+
+    """
+    Save snapshot of displayed board
+    """
+    def save_display(self):
+        match_name = f"{self.black_name}"
+        dir_name = f"movies/{match_name}"
+        if not os.path.exists(dir_name):
+            os.mkdir(dir_name)
+        self.fig.savefig(
+            f"movies/{match_name}/{str(np.int64(self.t/3)).zfill(4)}.png",
+            bbox_inches='tight', dpi=100.
+        )
+        
+
+
+    """
+    Read from a file to set a player's initial cell configuration
+    
+    The file must contain N columns and N rows of 0s and 1s
+    (other characters will be ignored, grid points will be left
+    empty by default if there are less than N*N 0s and 1s, and extra
+    0s and 1s will be ignored). The file name is used as the team name.
+
+    Inputs:
+        - f (string): input file name
+    """
+    def read_state_from_file(self, fname):
+        
+        arr = np.zeros(self.N*self.N, dtype = np.int8)
+        ii = 0
+        with open(fname, "r") as f:
+            for line in f:
+                for ch in line:
+                    if ii >= self.N*self.N:
+                        continue
+                    if ch == "0":
+                        arr[ii] = 0
+                        ii += 1
+                    elif ch == "1":
+                        arr[ii] = 1
+                        ii += 1
+        arr = np.reshape(arr, (self.N, self.N))
+        self.black[:,:] = arr
+        self.black_name = fname.replace("entries/","")
+        self.black_history[0] = np.sum(self.black)
+
+    """
+    Advance the cells by one time step
+    """
+    def evolve(self):
+
+        kernel = np.ones((3, 3), dtype = np.int8)
+        kernel[1,1] = 0
+        black_neighbors = signal.convolve2d(self.black, kernel,
+                mode = 'same', boundary = 'wrap')
+        survival_mask = (
+            ((black_neighbors) == 2) |
+            ((black_neighbors) == 3)
+        )
+        black_birth_mask = (
+                (self.black == 0) &
+                (black_neighbors == 3)
+        )
+        black_mask = (
+                ((self.black > 0) & survival_mask) |
+                black_birth_mask
+        )
+        self.black[:,:] = 0
+        self.black[black_mask] = 1
+        if self.t < len(self.black_history)-1:
+            self.t += 1
+            self.black_history[self.t] = np.sum(self.black)
