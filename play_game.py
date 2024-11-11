@@ -34,7 +34,7 @@ if pvp:
     input("Press enter to continue")
 
     while True:
-        for _ in range(3):
+        for _ in range(1):
             game.evolve()
             if game.red_has_won():
                 game.update_display()
